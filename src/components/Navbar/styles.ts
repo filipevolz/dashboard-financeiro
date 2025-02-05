@@ -12,6 +12,7 @@ export const NavbarContainer = styled.div`
 
 export const LogoImage = styled.img`
   width: 100%;
+  margin-top: -50px;
 `
 
 export const NavLinkContainer = styled(NavLink)`
