@@ -1,7 +1,7 @@
 export function Home(){
   return(
-    <div>
-      
-    </div>
+    <main>
+      teste
+    </main>
   )
 }
