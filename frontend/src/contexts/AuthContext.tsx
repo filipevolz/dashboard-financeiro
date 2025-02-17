@@ -1,38 +1,39 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useState, type ReactNode } from "react";
 
 interface AuthContextType {
-  isAuthenticated: boolean;
-  login: () => void;
+  signed: boolean;
+  login: (token: string) => void;
   logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+interface AuthProviderProps {
+  children: ReactNode;
+}
 
-  const login = () => {
-    setIsAuthenticated(true);
-    // Aqui você pode armazenar o token no localStorage, sessionStorage ou outro meio
-    localStorage.setItem('isAuthenticated', 'true');
+export const AuthProvider = ({ children }: AuthProviderProps) => {
+  const [signed, setSigned] = useState<boolean>(() => {
+    // Verifica se já existe um token salvo no localStorage
+    const token = localStorage.getItem("jwtToken");
+    return !!token; // Converte para boolean (true se houver token, false se não)
+  });
+
+  // Função para logar e salvar o token
+  const login = (token: string) => {
+    localStorage.setItem("jwtToken", token);
+    setSigned(true);
   };
 
+  // Função para deslogar
   const logout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem("jwtToken");
+    setSigned(false);
   };
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+    <AuthContext.Provider value={{ signed, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
 };

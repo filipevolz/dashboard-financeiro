@@ -7,6 +7,7 @@ import { Button } from "../../components/Button";
 import { OtherDivider } from "../../components/OtherDivider";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import axios from 'axios';
 
 const registerFormShema = z
   .object({
@@ -31,29 +32,18 @@ export function Register() {
 
   // Função para lidar com o envio do formulário
   async function handleRegister(data: RegisterFormType) {
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
     try {
-      const response = await fetch("http://localhost:8000/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-        }),
+      const response = await axios.post('http://localhost:8000/register', data, {
+        headers: { "Content-Type": "application/json" }
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        setErrorMessage(errorData.message || "Erro ao registrar");
-      } else {
-        navigate('/login')
+      if (response.status === 201) {
+        setSuccessMessage('Cadastro realizado com sucesso!');
+        navigate('/login');
       }
+      setErrorMessage(null);
     } catch (error) {
-      setErrorMessage("Erro ao se comunicar com o servidor");
+      setErrorMessage('Falha ao realizar o cadastro');
+      console.error(error);
     }
   }
 

@@ -5,57 +5,48 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { FormLogin, LoginButtonGoogle } from "./styles";
 import { OtherDivider } from "../../components/OtherDivider";
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../contexts/AuthContext";
+import { useContext, useState } from "react";
+import axios from "axios";
+import { AuthContext } from "../../contexts/AuthContext"; // Certifique-se de importar corretamente
 
 const loginFormSchema = z.object({
   email: z.string().email("Email Inválido"),
-  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres")
+  password: z.string().min(8, "A senha deve ter pelo menos 8 caracteres"),
 });
 
 type LoginFormData = z.infer<typeof loginFormSchema>;
 
 export function Login() {
-  const { login } = useAuth();
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginFormSchema),
   });
-  const navigate = useNavigate()
 
+  const navigate = useNavigate();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const { login } = useContext(AuthContext)!;
 
   async function handleLogin(data: LoginFormData) {
-    setErrorMessage(null); // Resetando mensagens de erro antes de enviar
-    setSuccessMessage(null); // Resetando mensagens de sucesso
-
     try {
-      const response = await fetch("http://localhost:8000/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: data.email,
-          password: data.password,
-        }),
+      const response = await axios.post("http://localhost:8000/login", data, {
+        headers: { "Content-Type": "application/json" },
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        setErrorMessage(errorData.message || "Erro ao fazer login");
-      } else {
-        login();
-        navigate('/dashboard')
+      if (response.status === 200) {
+        login(response.data.token);
+        localStorage.setItem('jwtToken', response.data.token); 
+        navigate("/dashboard");
+        setErrorMessage(null);
       }
     } catch (error) {
-      setErrorMessage("Erro ao se comunicar com o servidor");
+      setErrorMessage("Falha ao efetuar login");
+      console.error(error);
     }
   }
 
   return (
-    <>  
+    <>
       <FormLogin onSubmit={handleSubmit(handleLogin)}>
         <Input
           label="Email"
@@ -74,18 +65,15 @@ export function Login() {
         {errors.password && <span>{errors.password.message}</span>}
 
         {errorMessage && <div style={{ color: "red" }}>{errorMessage}</div>}
-        {successMessage && <div style={{ color: "green" }}>{successMessage}</div>}
 
         <Button type="submit">Login</Button>
         <a href="">Esqueceu a senha?</a>
-        
-        <OtherDivider />
-        
-        <LoginButtonGoogle type="button">
-          Login com Google
-        </LoginButtonGoogle>
 
-        <span style={{ textAlign: 'center' }}>
+        <OtherDivider />
+
+        <LoginButtonGoogle type="button">Login com Google</LoginButtonGoogle>
+
+        <span style={{ textAlign: "center" }}>
           Novo na NextFinance? <a href="/register">Cadastre-se</a>
         </span>
       </FormLogin>

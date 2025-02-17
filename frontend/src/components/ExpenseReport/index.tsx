@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ExpenseReportAddBtn, ExpenseReportContainer, ExpenseReportHeader, ExpenseReportItem, ExpenseReportList, ExpenseReportTitle, ModalContainer, Form, ButtonCloseForm } from "./styles";
 import { iconMap, ExpenseType } from "../../@types/iconTypes";
 import { Plus, X } from "phosphor-react";
@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from 'zod';
 import { Input } from "../Input";
 import { Button } from "../Button";
+import axios from 'axios';
 
 const createExpenseReportFormSchema = z.object({
   name: z.string()
@@ -41,22 +42,11 @@ export function ExpenseReport() {
   const { register, handleSubmit, formState: {errors}, reset } = useForm<CreateExpenseReportFormData>({
     resolver: zodResolver(createExpenseReportFormSchema),
   })
-  
-
   const [expense, setExpense] = useState<ExpenseReportProps[]>([]);
 
-  function handleCreateExpenseReport(data: CreateExpenseReportFormData) {
-    const newExpense: ExpenseReportProps = {
-      id: expense.length + 1,
-      name: data.name,
-      value: data.value,
-      type: data.type as ExpenseType,
-    };
-  
-    setExpense(prevExpenses => [...prevExpenses, newExpense]);
-    reset();
-    setIsModalOpen(false);
-  }  
+  async function handleCreateExpenseReport(expenseData: CreateExpenseReportFormData) {
+    console.log(expenseData)
+  }
 
   function handleCloseForm() {
     reset();
