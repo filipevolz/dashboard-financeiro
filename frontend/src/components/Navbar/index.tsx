@@ -8,7 +8,7 @@ export function Navbar(){
     <NavbarContainer>
       <LogoImage src={Logo} />
       
-      <NavLinkContainer to="/">
+      <NavLinkContainer to="/dashboard">
         <House size={24} />
         Dashboard
       </NavLinkContainer>

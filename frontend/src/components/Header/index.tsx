@@ -8,7 +8,7 @@ export function Header(){
   const location = useLocation();
 
   const titles: Record<string, string> = {
-    "/": "Dashboard",
+    "/dashboard": "Dashboard",
     "/insight": "Insight",
     "/transaction": "Transaction",
     "/account": "Account",

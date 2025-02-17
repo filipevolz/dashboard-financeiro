@@ -86,6 +86,7 @@ export const Form = styled.form`
     border-radius: 5px;
     border: none;
     font-size: 1rem;
+    margin-bottom: 1rem;
 
     appearance: none;
   }

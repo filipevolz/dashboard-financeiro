@@ -5,7 +5,6 @@ export const ButtonContainer = styled.button`
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  margin-top: 1rem;
   border: none;
   border-radius: 8px;
   background: ${(props) => props.theme["green-500"]};
