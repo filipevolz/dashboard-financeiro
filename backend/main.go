@@ -145,12 +145,54 @@ func loginHandler(db *sql.DB) http.HandlerFunc {
     }
 }
 
-// Função para criar uma despesa
-func createExpenseHandler(db *sql.DB) http.HandlerFunc {
+func getExpensesHandles(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        userID, err := getUserIDFromToken(r)
+        email, err := getUserIDFromToken(r)
         if err != nil {
             http.Error(w, "Token inválido", http.StatusUnauthorized)
+            return
+        }
+
+        var userID int
+        err = db.QueryRow("SELECT id FROM users WHERE email=$1", email).Scan(&userID)
+        if err != nil {
+            http.Error(w, "Usuário não encontrado", http.StatusUnauthorized)
+            return
+        }
+
+        rows, err := db.Query("SELECT id, name, value, type FROM expenses WHERE user_id=$1", userID)
+        if err != nil {
+            http.Error(w, "Erro ao buscar despesas", http.StatusInternalServerError)
+            return
+        }
+        defer rows.Close()
+
+        var expenses []Expense
+        for rows.Next() {
+            var expense Expense
+            if err := rows.Scan(&expense.ID, &expense.Name, &expense.Value, &expense.Type); err != nil {
+                http.Error(w, "Erro ao processar despesas", http.StatusInternalServerError)
+                return
+            }
+            expenses = append(expenses, expense)
+        }
+
+        json.NewEncoder(w).Encode(expenses)
+    }
+}
+
+func createExpenseHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        email, err := getUserIDFromToken(r)
+        if err != nil {
+            http.Error(w, "Token inválido", http.StatusUnauthorized)
+            return
+        }
+
+        var userID int
+        err = db.QueryRow("SELECT id FROM users WHERE email=$1", email).Scan(&userID)
+        if err != nil {
+            http.Error(w, "Usuário não encontrado", http.StatusUnauthorized)
             return
         }
 
@@ -170,6 +212,94 @@ func createExpenseHandler(db *sql.DB) http.HandlerFunc {
 
         w.WriteHeader(http.StatusCreated)
         json.NewEncoder(w).Encode(expense)
+    }
+}
+
+// Função para atualizar uma despesa
+func updateExpenseHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        // Obter o ID da despesa da URL
+        vars := mux.Vars(r)
+        expenseID := vars["id"]
+
+        // Validar token e obter o user_id
+        email, err := getUserIDFromToken(r)
+        if err != nil {
+            http.Error(w, "Token inválido", http.StatusUnauthorized)
+            return
+        }
+
+        var userID int
+        err = db.QueryRow("SELECT id FROM users WHERE email=$1", email).Scan(&userID)
+        if err != nil {
+            http.Error(w, "Usuário não encontrado", http.StatusUnauthorized)
+            return
+        }
+
+        // Verificar se a despesa existe para o usuário
+        var existingExpense Expense
+        err = db.QueryRow("SELECT id, name, value, type FROM expenses WHERE id=$1 AND user_id=$2", expenseID, userID).Scan(&existingExpense.ID, &existingExpense.Name, &existingExpense.Value, &existingExpense.Type)
+        if err != nil {
+            http.Error(w, "Despesa não encontrada", http.StatusNotFound)
+            return
+        }
+
+        // Decodificar o corpo da requisição para obter os dados atualizados
+        var expense Expense
+        if err := json.NewDecoder(r.Body).Decode(&expense); err != nil {
+            http.Error(w, "Erro ao decodificar os dados", http.StatusBadRequest)
+            return
+        }
+
+        // Atualizar a despesa no banco de dados
+        _, err = db.Exec("UPDATE expenses SET name=$1, value=$2, type=$3 WHERE id=$4 AND user_id=$5",
+            expense.Name, expense.Value, expense.Type, expenseID, userID)
+        if err != nil {
+            http.Error(w, "Erro ao atualizar a despesa", http.StatusInternalServerError)
+            return
+        }
+
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(expense)
+    }
+}
+
+func deleteExpenseHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        // Obter o ID da despesa da URL
+        vars := mux.Vars(r)
+        expenseID := vars["id"]
+
+        // Validar token e obter o user_id
+        email, err := getUserIDFromToken(r)
+        if err != nil {
+            http.Error(w, "Token inválido", http.StatusUnauthorized)
+            return
+        }
+
+        var userID int
+        err = db.QueryRow("SELECT id FROM users WHERE email=$1", email).Scan(&userID)
+        if err != nil {
+            http.Error(w, "Usuário não encontrado", http.StatusUnauthorized)
+            return
+        }
+
+        // Verificar se a despesa existe para o usuário
+        var existingExpense Expense
+        err = db.QueryRow("SELECT id, name, value, type FROM expenses WHERE id=$1 AND user_id=$2", expenseID, userID).Scan(&existingExpense.ID, &existingExpense.Name, &existingExpense.Value, &existingExpense.Type)
+        if err != nil {
+            http.Error(w, "Despesa não encontrada", http.StatusNotFound)
+            return
+        }
+
+        // Excluir a despesa do banco de dados
+        _, err = db.Exec("DELETE FROM expenses WHERE id=$1 AND user_id=$2", expenseID, userID)
+        if err != nil {
+            http.Error(w, "Erro ao excluir a despesa", http.StatusInternalServerError)
+            return
+        }
+
+        w.WriteHeader(http.StatusNoContent)
     }
 }
 
@@ -224,8 +354,11 @@ func main() {
     r.HandleFunc("/register", registerHandler(db)).Methods("POST")
     r.HandleFunc("/login", loginHandler(db)).Methods("POST")
 
+    r.HandleFunc("/expenses", getExpensesHandles(db)).Methods("GET")
     r.HandleFunc("/expenses", createExpenseHandler(db)).Methods("POST")
-    r.HandleFunc("/expenses", getExpensesHandler(db)).Methods("GET")
+    r.HandleFunc("/expenses/{id}", updateExpenseHandler(db)).Methods("PUT")
+    r.HandleFunc("/expenses/{id}", deleteExpenseHandler(db)).Methods("DELETE")
+    
 
     r.Handle("/protected", authenticateMiddleware(http.HandlerFunc(protectedHandler))).Methods("GET")
 

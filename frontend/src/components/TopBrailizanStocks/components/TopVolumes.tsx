@@ -14,36 +14,36 @@ interface StockVolume {
 export function TopVolumes(){
   const [stocks, setStocks] = useState<StockVolume[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const requests = stocksSymbols.map(symbol =>
-          axios.get(`https://brapi.dev/api/quote/${symbol}?token=aVnbfwEk6K2DyT9iokWxTo`)
-        );
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const requests = stocksSymbols.map(symbol =>
+  //         axios.get(`https://brapi.dev/api/quote/${symbol}?token=aVnbfwEk6K2DyT9iokWxTo`)
+  //       );
 
-        // Espera todas as requisições serem concluídas
-        const responses = await Promise.all(requests);
+  //       // Espera todas as requisições serem concluídas
+  //       const responses = await Promise.all(requests);
 
-        // Extrair dados da resposta e setar no estado
-        const data = responses.map(response => ({
-          symbol: response.data.results[0].symbol,
-          longName: response.data.results[0].longName,
-          logourl: response.data.results[0].logourl,
-          regularMarketPrice: response.data.results[0].regularMarketPrice,
-          regularMarketVolume: response.data.results[0].regularMarketVolume, // Volume de mercado
-        }));
+  //       // Extrair dados da resposta e setar no estado
+  //       const data = responses.map(response => ({
+  //         symbol: response.data.results[0].symbol,
+  //         longName: response.data.results[0].longName,
+  //         logourl: response.data.results[0].logourl,
+  //         regularMarketPrice: response.data.results[0].regularMarketPrice,
+  //         regularMarketVolume: response.data.results[0].regularMarketVolume, // Volume de mercado
+  //       }));
 
-        // Ordenar os dados pelo volume de compras (decrescente)
-        const sortedData = data.sort((a, b) => b.regularMarketVolume - a.regularMarketVolume);
+  //       // Ordenar os dados pelo volume de compras (decrescente)
+  //       const sortedData = data.sort((a, b) => b.regularMarketVolume - a.regularMarketVolume);
 
-        setStocks(sortedData.slice(0, 8));
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error);
-      }
-    };
+  //       setStocks(sortedData.slice(0, 8));
+  //     } catch (error) {
+  //       console.error("Erro ao buscar dados:", error);
+  //     }
+  //   };
 
-    fetchData();
-  }, []);
+  //   fetchData();
+  // }, []);
 
   return(
     <>

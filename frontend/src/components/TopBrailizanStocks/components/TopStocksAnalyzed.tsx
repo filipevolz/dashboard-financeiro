@@ -40,7 +40,7 @@ export function TopStocksAnalyzed() {
         stock.dividendYield > 0.07 && stock.dividendYield < 0.14 &&
         stock.roe > 0.15 && stock.roe < 0.30 &&
         stock.liquidityTwoMonths > 1000000 &&
-        stock.revenueGrowthFiveYears > 0.01
+        stock.revenueGrowthFiveYears > 0.1
       );
     });
     setFilteredStocks(filtered);

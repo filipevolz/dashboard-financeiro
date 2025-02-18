@@ -55,7 +55,26 @@ export const ExpenseReportItem = styled.li`
   }
 `
 
+export const IconBtn = styled.button`
+  display: flex;
+  border: none;
+  background-color: ${(props) => props.theme['gray-700']};
+  color: ${(props) => props.theme['gray-100']};
+  transition: 0.3s ease-in-out;
+  cursor: pointer;
+`
 
+export const UpdateBtn = styled(IconBtn)`
+  &:hover {
+    color: ${(props) => props.theme['green-500']};
+  }
+`
+
+export const RemoveBtn = styled(IconBtn)`
+  &:hover {
+    color: ${(props) => props.theme['red-500']};
+  }
+`
 
 export const ModalContainer = styled.div`
   position: fixed;

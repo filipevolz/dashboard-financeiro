@@ -14,33 +14,33 @@ interface Stock {
 export function TopUSStocks() {
   const [stocks, setStocks] = useState<Stock[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const requests = usStocksSymbols.map(symbol =>
-          axios.get(`https://brapi.dev/api/quote/${symbol}?token=aVnbfwEk6K2DyT9iokWxTo`)
-        );
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     try {
+  //       const requests = usStocksSymbols.map(symbol =>
+  //         axios.get(`https://brapi.dev/api/quote/${symbol}?token=aVnbfwEk6K2DyT9iokWxTo`)
+  //       );
 
-        const responses = await Promise.all(requests);
+  //       const responses = await Promise.all(requests);
 
-        const data = responses.map<Stock>(response => ({
-          symbol: response.data.results[0].symbol,
-          longName: response.data.results[0].longName,
-          logourl: response.data.results[0].logourl,
-          regularMarketPrice: response.data.results[0].regularMarketPrice,
-          regularMarketVolume: response.data.results[0].regularMarketVolume,
-        }));
+  //       const data = responses.map<Stock>(response => ({
+  //         symbol: response.data.results[0].symbol,
+  //         longName: response.data.results[0].longName,
+  //         logourl: response.data.results[0].logourl,
+  //         regularMarketPrice: response.data.results[0].regularMarketPrice,
+  //         regularMarketVolume: response.data.results[0].regularMarketVolume,
+  //       }));
 
-        const sortedData = data.sort((a, b) => b.regularMarketVolume - a.regularMarketVolume);
+  //       const sortedData = data.sort((a, b) => b.regularMarketVolume - a.regularMarketVolume);
 
-        setStocks(sortedData.slice(0, 8));
-      } catch (error) {
-        console.error("Erro ao buscar dados:", error);
-      }
-    };
+  //       setStocks(sortedData.slice(0, 8));
+  //     } catch (error) {
+  //       console.error("Erro ao buscar dados:", error);
+  //     }
+  //   };
 
-    fetchData();
-  }, []);
+  //   fetchData();
+  // }, []);
 
   return (
     <TopUSStocksContainer>
