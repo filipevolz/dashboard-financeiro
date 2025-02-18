@@ -47,6 +47,18 @@ type Expense struct {
     UserID int     `json:"user_id"`
 }
 
+type User struct {
+    ID          int     `json:"id"`
+    UserId      int     `json:"user_id"`
+    Name        string  `json:"name"`
+    Phone       string  `json:"phone"`
+    Cpf         string  `json:"cpf"`
+    Cnpj        string  `json:"cnpj"`
+    ZipCode     string  `json:"zip_code"`
+    State       string  `json:"state"`
+    City        string  `json:"city"`
+}
+
 // Função que extrai o user_id do token
 func getUserIDFromToken(r *http.Request) (string, error) {
     tokenString := r.Header.Get("Authorization")
@@ -329,6 +341,115 @@ func authenticateMiddleware(next http.Handler) http.Handler {
     })
 }
 
+func getUserHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        email, err := getUserIDFromToken(r)
+        if err != nil {
+            http.Error(w, "Token inválido", http.StatusUnauthorized)
+            return
+        }
+
+        var userID int
+        err = db.QueryRow("SELECT id FROM users WHERE email=$1", email).Scan(&userID)
+        if err != nil {
+            http.Error(w, "Usuário não encontrado", http.StatusUnauthorized)
+            return
+        }
+
+        var user User
+        err = db.QueryRow(`
+            SELECT id, name, phone, cpf, cnpj, zip_code, state, city
+            FROM user_profiles WHERE id=$1
+        `, userID).Scan(&user.ID, &user.Name, &user.Phone, &user.Cpf, &user.Cnpj, &user.ZipCode, &user.State, &user.City)
+
+        if err != nil {
+            if err == sql.ErrNoRows {
+                http.Error(w, "Usuário não encontrado", http.StatusNotFound)
+            } else {
+                http.Error(w, "Erro interno", http.StatusInternalServerError)
+                log.Printf("Erro ao buscar usuário: %v", err)
+            }
+            return
+        }
+
+        w.Header().Set("Content-Type", "application/json")
+        json.NewEncoder(w).Encode(user)
+    }
+}
+
+
+func createUserHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        email, err := getUserIDFromToken(r)
+        if err != nil {
+            http.Error(w, "Token inválido", http.StatusUnauthorized)
+            return
+        }
+
+        var userID int
+        err = db.QueryRow("SELECT id FROM users WHERE email=$1", email).Scan(&userID)
+        if err != nil {
+            http.Error(w, "Usuário não encontrado", http.StatusUnauthorized)
+            return
+        }
+
+        var user User
+        if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+            http.Error(w, "Erro ao decodificar os dados", http.StatusBadRequest)
+            return
+        }
+
+        err = db.QueryRow("INSERT INTO user_profiles (name, phone, cpf, cnpj, zip_code, state, city, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id", 
+            user.Name, user.Phone, user.Cpf, user.Cnpj, user.ZipCode, user.State, user.City, userID).Scan(&user.ID)
+        if err != nil {
+            http.Error(w, "Erro ao criar usuário", http.StatusInternalServerError)
+            return
+        }
+
+        w.WriteHeader(http.StatusCreated)
+        json.NewEncoder(w).Encode(user)
+    }
+}
+
+func updateUserHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        vars := mux.Vars(r)
+        userID := vars["id"]
+
+        var user User
+        if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
+            http.Error(w, "Erro ao decodificar os dados", http.StatusBadRequest)
+            return
+        }
+
+        _, err := db.Exec("UPDATE user_profiles SET name=$1, phone=$2, cpf=$3, cnpj=$4, zip_code=$5, state=$6, city=$7 WHERE id=$8", 
+            user.Name, user.Phone, user.Cpf, user.Cnpj, user.ZipCode, user.State, user.City, userID)
+        if err != nil {
+            http.Error(w, "Erro ao atualizar usuário", http.StatusInternalServerError)
+            return
+        }
+
+        w.WriteHeader(http.StatusOK)
+        json.NewEncoder(w).Encode(user)
+    }
+}
+
+func deleteUserHandler(db *sql.DB) http.HandlerFunc {
+    return func(w http.ResponseWriter, r *http.Request) {
+        vars := mux.Vars(r)
+        userID := vars["id"]
+
+        _, err := db.Exec("DELETE FROM user_profiles WHERE id=$1", userID)
+        if err != nil {
+            http.Error(w, "Erro ao excluir usuário", http.StatusInternalServerError)
+            return
+        }
+
+        w.WriteHeader(http.StatusNoContent)
+    }
+}
+
+
 func protectedHandler(w http.ResponseWriter, r *http.Request) {
     json.NewEncoder(w).Encode(map[string]string{"message": "Bem-vindo à rota protegida!"})
 }
@@ -358,6 +479,11 @@ func main() {
     r.HandleFunc("/expenses", createExpenseHandler(db)).Methods("POST")
     r.HandleFunc("/expenses/{id}", updateExpenseHandler(db)).Methods("PUT")
     r.HandleFunc("/expenses/{id}", deleteExpenseHandler(db)).Methods("DELETE")
+
+    r.HandleFunc("/user/", getUserHandler(db)).Methods("GET")
+    r.HandleFunc("/user/", createUserHandler(db)).Methods("POST")
+    r.HandleFunc("/user/", updateUserHandler(db)).Methods("PUT")
+    r.HandleFunc("/user/", deleteUserHandler(db)).Methods("DELETE")
     
 
     r.Handle("/protected", authenticateMiddleware(http.HandlerFunc(protectedHandler))).Methods("GET")

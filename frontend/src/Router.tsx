@@ -6,6 +6,7 @@ import { Login } from "./pages/Login";
 import { DefaultLayoutSign } from "./layouts/DefaultLayoutSign";
 import { Register } from "./pages/Register";
 import { PrivateRoute } from "./PrivateRoute";
+import { Account } from "./pages/Account";
 
 export function Router() {
   return (
@@ -21,6 +22,7 @@ export function Router() {
         <Route path="/" element={<DefaultLayout />}>
           <Route path="/dashboard" element={<Home />} />
           <Route path="/insight" element={<Insight />} />
+          <Route path="/account" element={<Account />} />
         </Route>
       </Route>
     </Routes>
