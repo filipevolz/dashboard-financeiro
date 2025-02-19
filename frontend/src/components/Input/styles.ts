@@ -18,4 +18,8 @@ export const InputContainer = styled.div`
     font-size: 1rem;
     appearance: none;
   }
+  
+  span {
+    color: ${(props) => props.theme["red-500"]};
+  }
 `

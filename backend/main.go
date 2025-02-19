@@ -50,11 +50,12 @@ type Expense struct {
 type User struct {
     ID          int     `json:"id"`
     UserId      int     `json:"user_id"`
+    Email       string  `json:"email"`
     Name        string  `json:"name"`
     Phone       string  `json:"phone"`
     Cpf         string  `json:"cpf"`
     Cnpj        string  `json:"cnpj"`
-    ZipCode     string  `json:"zip_code"`
+    Cep         string  `json:"cep"`
     State       string  `json:"state"`
     City        string  `json:"city"`
 }
@@ -358,13 +359,19 @@ func getUserHandler(db *sql.DB) http.HandlerFunc {
 
         var user User
         err = db.QueryRow(`
-            SELECT id, name, phone, cpf, cnpj, zip_code, state, city
-            FROM user_profiles WHERE id=$1
-        `, userID).Scan(&user.ID, &user.Name, &user.Phone, &user.Cpf, &user.Cnpj, &user.ZipCode, &user.State, &user.City)
+            SELECT up.id, u.email, up.name, up.phone, up.cpf, up.cnpj, 
+                   up.cep, up.state, up.city
+            FROM user_profiles up
+            JOIN users u ON up.user_id = u.id
+            WHERE up.user_id = $1
+        `, userID).Scan(
+            &user.ID, &user.Email, &user.Name, &user.Phone, &user.Cpf, 
+            &user.Cnpj, &user.Cep, &user.State, &user.City,
+        )
 
         if err != nil {
             if err == sql.ErrNoRows {
-                http.Error(w, "Usuário não encontrado", http.StatusNotFound)
+                http.Error(w, "Perfil não encontrado", http.StatusNotFound)
             } else {
                 http.Error(w, "Erro interno", http.StatusInternalServerError)
                 log.Printf("Erro ao buscar usuário: %v", err)
@@ -376,7 +383,6 @@ func getUserHandler(db *sql.DB) http.HandlerFunc {
         json.NewEncoder(w).Encode(user)
     }
 }
-
 
 func createUserHandler(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
@@ -399,8 +405,8 @@ func createUserHandler(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        err = db.QueryRow("INSERT INTO user_profiles (name, phone, cpf, cnpj, zip_code, state, city, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id", 
-            user.Name, user.Phone, user.Cpf, user.Cnpj, user.ZipCode, user.State, user.City, userID).Scan(&user.ID)
+        err = db.QueryRow("INSERT INTO user_profiles (email, name, phone, cpf, cnpj, cep, state, city, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id", 
+            user.Email, user.Name, user.Phone, user.Cpf, user.Cnpj, user.Cep, user.State, user.City, userID).Scan(&user.ID)
         if err != nil {
             http.Error(w, "Erro ao criar usuário", http.StatusInternalServerError)
             return
@@ -413,8 +419,18 @@ func createUserHandler(db *sql.DB) http.HandlerFunc {
 
 func updateUserHandler(db *sql.DB) http.HandlerFunc {
     return func(w http.ResponseWriter, r *http.Request) {
-        vars := mux.Vars(r)
-        userID := vars["id"]
+        email, err := getUserIDFromToken(r)
+        if err != nil {
+            http.Error(w, "Token inválido", http.StatusUnauthorized)
+            return
+        }
+
+        var userID int
+        err = db.QueryRow("SELECT id FROM users WHERE email=$1", email).Scan(&userID)
+        if err != nil {
+            http.Error(w, "Usuário não encontrado", http.StatusUnauthorized)
+            return
+        }
 
         var user User
         if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
@@ -422,10 +438,10 @@ func updateUserHandler(db *sql.DB) http.HandlerFunc {
             return
         }
 
-        _, err := db.Exec("UPDATE user_profiles SET name=$1, phone=$2, cpf=$3, cnpj=$4, zip_code=$5, state=$6, city=$7 WHERE id=$8", 
-            user.Name, user.Phone, user.Cpf, user.Cnpj, user.ZipCode, user.State, user.City, userID)
+        _, err = db.Exec("UPDATE user_profiles SET name=$1, phone=$2, cpf=$3, cnpj=$4, cep=$5, state=$6, city=$7, email=$8 WHERE id=$9", 
+            user.Name, user.Phone, user.Cpf, user.Cnpj, user.Cep, user.State, user.City, user.Email, userID)
         if err != nil {
-            http.Error(w, "Erro ao atualizar usuário", http.StatusInternalServerError)
+            http.Error(w, "Erro ao atualizar UserProfile", http.StatusInternalServerError)
             return
         }
 

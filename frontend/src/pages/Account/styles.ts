@@ -34,9 +34,10 @@ export const AccountFormInputs = styled.div`
 
 export const AccountFormBtns = styled.div`
   display: flex;
+  align-items: center;
   gap: 1rem;
 
-  button:last-child {
+  button:nth-child(2) {
     background-color: ${(props) => props.theme["red-500"]};
     color: ${(props) => props.theme["gray-100"]};
 
